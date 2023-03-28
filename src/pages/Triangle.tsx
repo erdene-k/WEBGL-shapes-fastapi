@@ -232,8 +232,8 @@ const Triangle: React.FC = () => {
 
 
     // Load texture image
-    const textureImage = new Image();
-    textureImage.src = '../textureMetal.png';
+    const texture = new Image();
+    texture.src = '../textureMetal.png';
 
     // Create texture buffer
     const textureBuffer = gl.createTexture();
@@ -242,7 +242,7 @@ const Triangle: React.FC = () => {
     gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
 
     // Specify texture image data
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 
     // Set texture parameters
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -292,7 +292,8 @@ const Triangle: React.FC = () => {
     if (!modelViewMatrixUniformLocation) return;
     if (!projectionMatrixUniformLocation) return;
 
-    draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, 0, texture, texcoordBuffer, texcoordAttributeLocation: , textureUniformLocation);
+    draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, 0,
+      texture, textcoordBuffer, texcoordAttributeLocation, textureUniformLocation);
   }, []);
   return (
     <canvas ref={canvasRef} width={400} height={400} />
