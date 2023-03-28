@@ -66,28 +66,55 @@ const indices = [
 ];
 const colors = [
   // front face (red)
-  1, 1, 0, 1,
-
-
+  1, 0, 0, 1,
   // back face (green)
   0, 1, 0, 1,
-
-
   // top face (blue)
   0, 0, 1, 1,
-
-
   // bottom face (yellow)
   1, 1, 0, 1,
-
-
   // left face (magenta)
   1, 0, 1, 1,
- 
-
   // right face (cyan)
   0, 1, 1, 1,
 
+];
+const colorsB = [
+  // front face (red)
+  1, 0, 0, 1,
+  1, 0, 0, 1,
+  1, 0, 0, 1,
+  1, 0, 0, 1,
+
+  // back face (green)
+  0, 1, 0, 1,
+  0, 1, 0, 1,
+  0, 1, 0, 1,
+  0, 1, 0, 1,
+
+  // top face (blue)
+  0, 0, 1, 1,
+  0, 0, 1, 1,
+  0, 0, 1, 1,
+  0, 0, 1, 1,
+
+  // bottom face (yellow)
+  1, 1, 0, 1,
+  1, 1, 0, 1,
+  1, 1, 0, 1,
+  1, 1, 0, 1,
+
+  // left face (magenta)
+  1, 0, 1, 1,
+  1, 0, 1, 1,
+  1, 0, 1, 1,
+  1, 0, 1, 1,
+
+  // right face (cyan)
+  0, 1, 1, 1,
+  0, 1, 1, 1,
+  0, 1, 1, 1,
+  0, 1, 1, 1,
 ];
 
 const Triangle: React.FC = () => {
@@ -107,10 +134,10 @@ const Triangle: React.FC = () => {
 
     // Update the model view matrix with a rotation matrix
     const angle = deltaTime / 1000 * 90; // rotate 90 degrees per second
-    mat4.rotateY(modelViewMatrixRef.current, modelViewMatrixRef.current, angle * Math.PI / 180);
-
-
+    mat4.rotateX(modelViewMatrixRef.current, modelViewMatrixRef.current, angle * Math.PI / 180);
+  
     
+ 
     requestRef.current = requestAnimationFrame(update);
   };
 
@@ -127,8 +154,8 @@ const Triangle: React.FC = () => {
   const modelViewMatrix = mat4.create();
 
   mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -6]); // move the cube away from the camera
-  mat4.rotateY(modelViewMatrix, modelViewMatrix, angle); // rotate the cube around the Y-axis
-
+  mat4.rotateX(modelViewMatrix, modelViewMatrix, angle); // rotate the cube around the Y-axis
+  mat4.rotateY(modelViewMatrix, modelViewMatrix, angle); // r
   // Set the uniforms
   gl.uniformMatrix4fv(modelViewMatrixUniformLocation, false, modelViewMatrix);
   gl.uniformMatrix4fv(projectionMatrixUniformLocation, false, projectionMatrix);
@@ -146,6 +173,7 @@ const Triangle: React.FC = () => {
 
   // Bind the color buffer
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorsB), gl.STATIC_DRAW);
   gl.vertexAttribPointer(
     colorAttributeLocation,
     4, // 4 components per iteration (r, g, b, a)
@@ -154,7 +182,9 @@ const Triangle: React.FC = () => {
     0, // 0 = move forward size * sizeof(type) each iteration to get the next position
     0 // start at the beginning of the buffer
   );
-
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+  
   // Draw the front face
   gl.uniform4fv(colorUniformLocation, colors.slice(0, 4));
   gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
@@ -182,7 +212,7 @@ const Triangle: React.FC = () => {
   
     // Schedule the next frame
     requestAnimationFrame(() => {
-      draw(gl, program, positionAttributeLocation, colorUniformLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.01, colorBuffer, colorAttributeLocation);
+      draw(gl, program, positionAttributeLocation, colorUniformLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.02, colorBuffer, colorAttributeLocation);
     });
   }
 
@@ -275,6 +305,7 @@ const Triangle: React.FC = () => {
 
 
   const colorAttributeLocation = gl.getAttribLocation(program, "aVertexColor");
+  
   gl.vertexAttribPointer(
     colorAttributeLocation,
     size,
