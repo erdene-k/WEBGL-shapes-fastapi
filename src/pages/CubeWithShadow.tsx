@@ -4,21 +4,44 @@ import { mat4 } from "gl-matrix";
 
 const vertexShaderSource = `
   attribute vec4 aVertexPosition;
+  attribute vec4 aVertexColor;
+  attribute vec3 aVertexNormal;
 
+
+  uniform mat4 uNormalMatrix;
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
-  attribute vec4 aVertexColor;
+
+  varying highp vec3 vLighting;
   varying lowp vec4 vColor;
   void main() {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
     vColor = aVertexColor;
+
+    highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+    highp vec3 directionalLightColor = vec3(1, 1, 1);
+    highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
+
+    highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+
+    highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
+    vLighting = ambientLight + (directionalLightColor * directional)
+
+
+
   }
 `;
 
 const fragmentShaderSource = `
   precision mediump float;
   uniform vec4 uColor;
+  varying highp vec3 vLighting;
+
   void main() {
+
+
+    highp vec4 texelColor = texture2D(uSampler, vTextureCoord);
+    
     gl_FragColor = uColor;
   }
 `;
@@ -116,6 +139,25 @@ const colorsB = [
   0, 1, 1, 1,
   0, 1, 1, 1,
 ];
+const vertexNormals = [
+    // Front
+    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+
+    // Back
+    0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
+
+    // Top
+    0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+
+    // Bottom
+    0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
+
+    // Right
+    1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+
+    // Left
+    -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0,
+  ];
 
 const Triangle: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -123,6 +165,36 @@ const Triangle: React.FC = () => {
   const previousTimeRef = useRef<number>(0);
   const modelViewMatrixRef = useRef<mat4>(mat4.create());
 
+  function initNormalBuffer(gl: WebGLRenderingContext) {
+    const normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(vertexNormals),
+      gl.STATIC_DRAW
+    );
+  
+    return normalBuffer;
+  }
+
+function setNormalAttribute(gl:WebGLRenderingContext,normalBuffer:WebGLRenderbuffer, vertexNormal:number) {
+    const numComponents = 3;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.vertexAttribPointer(
+   vertexNormal,
+      numComponents,
+      type,
+      normalize,
+      stride,
+      offset
+    );
+    gl.enableVertexAttribArray(vertexNormal);
+  }
+  
   const update = (time: number) => {
     if (!previousTimeRef.current) {
       previousTimeRef.current = time;
@@ -141,8 +213,10 @@ const Triangle: React.FC = () => {
     requestRef.current = requestAnimationFrame(update);
   };
 
-  const draw = (gl: WebGLRenderingContext, program: WebGLProgram, positionAttributeLocation: number, colorUniformLocation: WebGLUniformLocation, modelViewMatrixUniformLocation: WebGLUniformLocation,
-    projectionMatrixUniformLocation: WebGLUniformLocation, positionBuffer: WebGLBuffer, indexBuffer: WebGLBuffer, projectionMatrix: mat4, angle: number, colorBuffer: WebGLBuffer, colorAttributeLocation: number) => {
+  const draw = (gl: WebGLRenderingContext, program: WebGLProgram, positionAttributeLocation: number,
+    colorUniformLocation: WebGLUniformLocation, modelViewMatrixUniformLocation: WebGLUniformLocation,
+    projectionMatrixUniformLocation: WebGLUniformLocation, positionBuffer: WebGLBuffer, indexBuffer: WebGLBuffer, 
+    projectionMatrix: mat4, angle: number, colorBuffer: WebGLBuffer, colorAttributeLocation: number) => {
     // Clear the canvas
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1.0);
@@ -189,6 +263,10 @@ const Triangle: React.FC = () => {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
+
+
+
+
     // Draw the front face
     gl.uniform4fv(colorUniformLocation, colors.slice(0, 4));
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
@@ -213,7 +291,15 @@ const Triangle: React.FC = () => {
     // Draw the right face
     gl.uniform4fv(colorUniformLocation, colors.slice(20, 24));
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 60);
+    const normalMatrix = mat4.create();
+    mat4.invert(normalMatrix, modelViewMatrix);
+    mat4.transpose(normalMatrix, normalMatrix);
 
+    gl.uniformMatrix4fv(
+        normalMatrix,
+        false,
+        normalMatrix
+      );
     // Schedule the next frame
     requestAnimationFrame(() => {
       draw(gl, program, positionAttributeLocation, colorUniformLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.02, colorBuffer, colorAttributeLocation);
@@ -279,17 +365,20 @@ const Triangle: React.FC = () => {
     const modelViewMatrixUniformLocation = gl.getUniformLocation(program, "uModelViewMatrix");
     const projectionMatrixUniformLocation = gl.getUniformLocation(program, "uProjectionMatrix");
     const colorAttributeLocation = gl.getAttribLocation(program, "aVertexColor");
+    const vertexNormal= gl.getAttribLocation(program, "aVertexNormal")
     const colorBuffer = gl.createBuffer();
     const positionBuffer = gl.createBuffer();
     const indexBuffer = gl.createBuffer();
+    const normalBuffer = initNormalBuffer(gl);
 
     if (!indexBuffer) return;
+    if (!normalBuffer) return;
     if (!colorBuffer) return;
     if (!positionBuffer) return;
     if (!colorUniformLocation) { return; }
     if (!modelViewMatrixUniformLocation) return;
     if (!projectionMatrixUniformLocation) return;
-
+    setNormalAttribute(gl, normalBuffer, vertexNormal);
     const size = 3; // 3 components per iteration
     const type = gl.FLOAT; // the data is 32bit floats
     const normalize = false; // don't normalize the data
