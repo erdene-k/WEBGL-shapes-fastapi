@@ -4,22 +4,21 @@ import { mat4 } from "gl-matrix";
 
 const vertexShaderSource = `
   attribute vec4 aVertexPosition;
-
+  attribute vec2 aTextureCoord;
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
-  attribute vec4 aVertexColor;
-  varying lowp vec4 vColor;
+  varying highp vec2 vTextureCoord;
   void main() {
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vColor = aVertexColor;
+      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      vTextureCoord = aTextureCoord;
   }
 `;
 
 const fragmentShaderSource = `
-  precision mediump float;
-  uniform vec4 uColor;
-  void main() {
-    gl_FragColor = uColor;
+  varying highp vec2 vTextureCoord;
+  uniform sampler2D uSampler;
+  void main(void) {
+    gl_FragColor = texture2D(uSampler, vTextureCoord);
   }
 `;
 
@@ -64,60 +63,10 @@ const indices = [
   16, 17, 18, 16, 18, 19, // Right face
   20, 21, 22, 20, 22, 23, // Left face
 ];
-const colors = [
-  // front face (red)
-  1, 0, 0, 1,
-  // back face (green)
-  0, 1, 0, 1,
-  // top face (blue)
-  0, 0, 1, 1,
-  // bottom face (yellow)
-  1, 1, 0, 1,
-  // left face (magenta)
-  1, 0, 1, 1,
-  // right face (cyan)
-  0, 1, 1, 1,
-
-];
-const colorsB = [
-  // front face (red)
-  1, 0, 0, 1,
-  1, 0, 0, 1,
-  1, 0, 0, 1,
-  1, 0, 0, 1,
-
-  // back face (green)
-  0, 1, 0, 1,
-  0, 1, 0, 1,
-  0, 1, 0, 1,
-  0, 1, 0, 1,
-
-  // top face (blue)
-  0, 0, 1, 1,
-  0, 0, 1, 1,
-  0, 0, 1, 1,
-  0, 0, 1, 1,
-
-  // bottom face (yellow)
-  1, 1, 0, 1,
-  1, 1, 0, 1,
-  1, 1, 0, 1,
-  1, 1, 0, 1,
-
-  // left face (magenta)
-  1, 0, 1, 1,
-  1, 0, 1, 1,
-  1, 0, 1, 1,
-  1, 0, 1, 1,
-
-  // right face (cyan)
-  0, 1, 1, 1,
-  0, 1, 1, 1,
-  0, 1, 1, 1,
-  0, 1, 1, 1,
-];
-
-const Triangle: React.FC = () => {
+function isPowerOf2(value: number) {
+  return (value & (value - 1)) === 0;
+}
+const Cube: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number>(0);
   const previousTimeRef = useRef<number>(0);
@@ -135,14 +84,11 @@ const Triangle: React.FC = () => {
     // Update the model view matrix with a rotation matrix
     const angle = deltaTime / 1000 * 90; // rotate 90 degrees per second
     mat4.rotateX(modelViewMatrixRef.current, modelViewMatrixRef.current, angle * Math.PI / 180);
-
-
-
     requestRef.current = requestAnimationFrame(update);
   };
 
-  const draw = (gl: WebGLRenderingContext, program: WebGLProgram, positionAttributeLocation: number, colorUniformLocation: WebGLUniformLocation, modelViewMatrixUniformLocation: WebGLUniformLocation,
-    projectionMatrixUniformLocation: WebGLUniformLocation, positionBuffer: WebGLBuffer, indexBuffer: WebGLBuffer, projectionMatrix: mat4, angle: number, colorBuffer: WebGLBuffer, colorAttributeLocation: number) => {
+  const draw = (gl: WebGLRenderingContext, program: WebGLProgram, positionAttributeLocation: number, modelViewMatrixUniformLocation: WebGLUniformLocation,
+    projectionMatrixUniformLocation: WebGLUniformLocation, positionBuffer: WebGLBuffer, indexBuffer: WebGLBuffer, projectionMatrix: mat4, angle: number, texture: WebGLBuffer, uSampler: WebGLUniformLocation) => {
     // Clear the canvas
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1.0);
@@ -160,34 +106,9 @@ const Triangle: React.FC = () => {
     gl.uniformMatrix4fv(modelViewMatrixUniformLocation, false, modelViewMatrix);
     gl.uniformMatrix4fv(projectionMatrixUniformLocation, false, projectionMatrix);
 
-    const normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
 
-    const vertexNormals = [
-      // Front
-      0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
 
-      // Back
-      0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
 
-      // Top
-      0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-
-      // Bottom
-      0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
-
-      // Right
-      1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-
-      // Left
-      -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0,
-    ];
-
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array(vertexNormals),
-      gl.STATIC_DRAW
-    );
 
     // Bind the position buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -200,49 +121,18 @@ const Triangle: React.FC = () => {
       0 // start at the beginning of the buffer
     );
 
+    // Tell WebGL we want to affect texture unit 0
+    gl.activeTexture(gl.TEXTURE0);
 
-    // Bind the color buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorsB), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(
-      colorAttributeLocation,
-      4, // 4 components per iteration (r, g, b, a)
-      gl.FLOAT, // the data is 32bit floats
-      false, // don't normalize the data
-      0, // 0 = move forward size * sizeof(type) each iteration to get the next position
-      0 // start at the beginning of the buffer
-    );
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+    // Bind the texture to texture unit 0
+    gl.bindTexture(gl.TEXTURE_2D, texture);
 
-    // Draw the front face
-    gl.uniform4fv(colorUniformLocation, colors.slice(0, 4));
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-
-    // Draw the back face
-    gl.uniform4fv(colorUniformLocation, colors.slice(4, 8));
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 12);
-
-    // Draw the top face
-    gl.uniform4fv(colorUniformLocation, colors.slice(8, 12));
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 24);
-
-
-    // Draw the bottom face
-    gl.uniform4fv(colorUniformLocation, colors.slice(12, 16));
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 36);
-
-    // Draw the left face
-    gl.uniform4fv(colorUniformLocation, colors.slice(16, 20));
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 48);
-
-    // Draw the right face
-    gl.uniform4fv(colorUniformLocation, colors.slice(20, 24));
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 60);
+    // Tell the shader we bound the texture to texture unit 0
+    gl.uniform1i(uSampler, 0);
 
     // Schedule the next frame
     requestAnimationFrame(() => {
-      draw(gl, program, positionAttributeLocation, colorUniformLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.02, colorBuffer, colorAttributeLocation);
+      draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.02, texture, uSampler);
     });
   }
 
@@ -301,18 +191,20 @@ const Triangle: React.FC = () => {
     }
 
     const positionAttributeLocation = gl.getAttribLocation(program, "aVertexPosition");
-    const colorUniformLocation = gl.getUniformLocation(program, "uColor");
     const modelViewMatrixUniformLocation = gl.getUniformLocation(program, "uModelViewMatrix");
     const projectionMatrixUniformLocation = gl.getUniformLocation(program, "uProjectionMatrix");
-    const colorAttributeLocation = gl.getAttribLocation(program, "aVertexColor");
-    const colorBuffer = gl.createBuffer();
+    const uSampler = gl.getUniformLocation(program, "uSampler")
+
+    const textureCoord = gl.getAttribLocation(program, "aTextureCoord");
     const positionBuffer = gl.createBuffer();
     const indexBuffer = gl.createBuffer();
 
+    const texture = gl.createTexture();
     if (!indexBuffer) return;
-    if (!colorBuffer) return;
+
+    if (!texture) return;
     if (!positionBuffer) return;
-    if (!colorUniformLocation) { return; }
+    if (!uSampler) return;
     if (!modelViewMatrixUniformLocation) return;
     if (!projectionMatrixUniformLocation) return;
 
@@ -322,9 +214,82 @@ const Triangle: React.FC = () => {
     const stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
     const offset = 0; // start at the beginning of the buffer
 
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    const textureCoordBuffer = gl.createBuffer();
+    if (!textureCoordBuffer) return;
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+
+    const textureCoordinates = [
+      // Front
+      0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+      // Back
+      0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+      // Top
+      0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+      // Bottom
+      0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+      // Right
+      0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+      // Left
+      0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+    ];
+
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(textureCoordinates),
+      gl.STATIC_DRAW);
+
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const width = 1;
+    const height = 1;
+    const border = 0;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+    const pixel = new Uint8Array([0, 0, 255, 255]); // opaque blue
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      width,
+      height,
+      border,
+      srcFormat,
+      srcType,
+      pixel
+    );
+
+    const image = new Image();
+    image.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        level,
+        internalFormat,
+        srcFormat,
+        srcType,
+        image
+      );
+
+      // WebGL1 has different requirements for power of 2 images
+      // vs. non power of 2 images so check if the image is a
+      // power of 2 in both dimensions.
+      if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+        // Yes, it's a power of 2. Generate mips.
+        gl.generateMipmap(gl.TEXTURE_2D);
+      } else {
+        // No, it's not a power of 2. Turn off mips and set
+        // wrapping to clamp to edge
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      }
+      image.src = 'cubetexture.png'
+    }
 
 
-
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
@@ -332,28 +297,13 @@ const Triangle: React.FC = () => {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
 
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.useProgram(program);
 
-    gl.enableVertexAttribArray(positionAttributeLocation);
 
 
-
-
-
-
-    gl.vertexAttribPointer(
-      colorAttributeLocation,
-      size,
-      type,
-      normalize,
-      stride,
-      offset
-    );
-    gl.enableVertexAttribArray(colorAttributeLocation);
 
 
 
@@ -366,7 +316,7 @@ const Triangle: React.FC = () => {
       offset
     );
 
-
+    gl.enableVertexAttribArray(positionAttributeLocation);
 
     const fieldOfView = 45 * Math.PI / 180; // in radians
     const aspect = gl.canvas.width / gl.canvas.height;
@@ -379,13 +329,24 @@ const Triangle: React.FC = () => {
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
 
+    const num = 2; // every coordinate composed of 2 values
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+    gl.vertexAttribPointer(
+      textureCoord,
+      num,
+      type,
+      normalize,
+      stride,
+      offset
+    );
+    gl.enableVertexAttribArray(textureCoord);
 
-    draw(gl, program, positionAttributeLocation, colorUniformLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, 0, colorBuffer, colorAttributeLocation);
+    draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, 0, texture, uSampler);
   }, []);
   return (
     <canvas ref={canvasRef} width={400} height={400} />
   );
 };
 
-export default Triangle;
+export default Cube;

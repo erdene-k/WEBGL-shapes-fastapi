@@ -1,16 +1,16 @@
 import React, { useRef } from 'react';
 import './App.css';
-import Canvas from './pages/Canvas';
-import RotatingCube from './pages/RotatingCube';
+import Cube from './pages/Cube';
+
 import Triangle from './pages/Triangle';
-import { WebGLCanvas } from './pages/WebGLCanvas';
+
 
 function App() {
 
   return (
     <div >
-
-      <Triangle/>
+      <Cube />
+      {/* <Triangle /> */}
     </div>
   );
 }
