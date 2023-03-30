@@ -16,6 +16,7 @@ for (let i = 0; i < numSides; i++) {
 vertices.push(0, -height / 2, 0);
 vertices.push(0, height / 2, 0);
 
+
 // Indices
 const indices: number[] = [];
 for (let i = 0; i < numSides; i++) {
