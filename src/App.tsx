@@ -9,6 +9,9 @@ import img from './textures/cubetexture.png'
 import texture from './textures/textures.jpg'
 import texture2 from './textures/texture2.jpg'
 function App() {
+//useState, useeffects
+//api
+//change attributes
 
   return (
     <div className='Shapes'>

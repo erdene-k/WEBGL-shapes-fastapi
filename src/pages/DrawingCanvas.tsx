@@ -221,7 +221,7 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
 
         // Schedule the next frame
         requestAnimationFrame(() => {
-            draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.015, texture, uSampler, normalMatrixUniformLocation);
+            draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.01, texture, uSampler, normalMatrixUniformLocation);
         });
     }
 
