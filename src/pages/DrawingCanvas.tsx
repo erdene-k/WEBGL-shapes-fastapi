@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { mat4 } from "gl-matrix";
-import img from './cubetexture.png'
 
 const vertexShaderSource = `
         attribute vec4 aVertexPosition;
@@ -46,15 +45,19 @@ const fragmentShaderSource = `
 
 
 interface ShapeProperties {
-    positions: number[],
+    vertices: number[],
     indices: number[],
-    vertexNormals: number[], textureCoordinates: number[],
+    vertexNormals: number[],
+    textureCoordinates: number[],
+    width: number,
+    height: number
+    textImg: string
 }
 
 function isPowerOf2(value: number) {
     return (value & (value - 1)) === 0;
 }
-const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }: ShapeProperties) => {
+const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, width, height, textImg }: ShapeProperties) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const requestRef = useRef<number>(0);
     const previousTimeRef = useRef<number>(0);
@@ -77,31 +80,19 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
         );
         gl.enableVertexAttribArray(vertexNormalAttributeLocation);
     }
-
     function initTextureBuffer(gl: WebGLRenderingContext) {
         const textureCoordBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-
-
-
         gl.bufferData(
             gl.ARRAY_BUFFER,
             new Float32Array(textureCoordinates),
             gl.STATIC_DRAW
         );
-
         return textureCoordBuffer;
     }
-
     function loadTexture(gl: WebGLRenderingContext, url: string) {
         const texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
-
-        // Because images have to be downloaded over the internet
-        // they might take a moment until they are ready.
-        // Until then put a single pixel in the texture so we can
-        // use it immediately. When the image has finished downloading
-        // we'll update the texture with the contents of the image.
         const level = 0;
         const internalFormat = gl.RGBA;
         const width = 1;
@@ -148,9 +139,6 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             }
         };
-
-
-
         image.src = url;
         console.log(image, "asdfasd")
         return texture;
@@ -177,14 +165,7 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
         const stride = 0; // how many bytes to get from one set to the next
         const offset = 0; // how many bytes inside the buffer to start from
         gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-        gl.vertexAttribPointer(
-            textureCoord,
-            num,
-            type,
-            normalize,
-            stride,
-            offset
-        );
+        gl.vertexAttribPointer(textureCoord, num, type, normalize, stride, offset);
         gl.enableVertexAttribArray(textureCoord);
     }
 
@@ -224,37 +205,18 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
         const normalMatrix = mat4.create();
         mat4.invert(normalMatrix, modelViewMatrix);
         mat4.transpose(normalMatrix, normalMatrix);
-        gl.uniformMatrix4fv(
-            normalMatrixUniformLocation,
-            false,
-            normalMatrix
-        );
+        gl.uniformMatrix4fv(normalMatrixUniformLocation, false, normalMatrix);
 
         // Bind the position buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.vertexAttribPointer(
-            positionAttributeLocation,
-            3, // 3 components per iteration (x, y, z)
-            gl.FLOAT, // the data is 32bit floats
-            false, // don't normalize the data
-            0, // 0 = move forward size * sizeof(type) each iteration to get the next position
-            0 // start at the beginning of the buffer
-        );
-
-
+        gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-        // Tell WebGL we want to affect texture unit 0
-
 
 
         gl.activeTexture(gl.TEXTURE0);
-
-        // Bind the texture to texture unit 0
         gl.bindTexture(gl.TEXTURE_2D, texture);
-
-        // Tell the shader we bound the texture to texture unit 0
         gl.uniform1i(uSampler, 0);
 
         // Schedule the next frame
@@ -267,16 +229,12 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
 
     useEffect(() => {
         if (!canvasRef.current) return;
-
         const canvas = canvasRef.current;
         const gl = canvas.getContext("webgl");
-
-        // Initialize WebGL and shader program...
         if (!gl) {
             console.error("Failed to get WebGL context");
             return;
         }
-
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
         if (!vertexShader) {
@@ -333,21 +291,15 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
         const indexBuffer = gl.createBuffer();
         const textureCoordBuffer = initTextureBuffer(gl);
         const normalBuffer = initNormalBuffer(gl);
-        const texture = loadTexture(gl, img);
-        // Flip image pixels into the bottom-to-top order that WebGL expects.
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        const texture = loadTexture(gl, textImg);
 
         //checking buffers
-
-
-
         if (!indexBuffer) return;
         if (!uSampler) return;
         if (!texture) return;
         if (!textureCoordBuffer) return;
         if (!normalBuffer) return;
         if (!positionBuffer) return;
-
         if (!modelViewMatrixUniformLocation) return;
         if (!projectionMatrixUniformLocation) return;
         if (!normalMatrixUniformLocation) return
@@ -356,13 +308,16 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
         const normalize = false; // don't normalize the data
         const stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
         const offset = 0; // start at the beginning of the buffer
-
-
+        const fieldOfView = 45 * Math.PI / 180; // in radians
+        const aspect = gl.canvas.width / gl.canvas.height;
+        const zNear = 0.1;
+        const zFar = 100.0;
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         setTextureAttribute(gl, textureCoordBuffer, textureCoord);
         setNormalAttribute(gl, normalBuffer, vertexNormalAttributeLocation);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
@@ -373,47 +328,21 @@ const DrawingCanvas = ({ positions, indices, vertexNormals, textureCoordinates }
 
         gl.enableVertexAttribArray(positionAttributeLocation);
 
-
-
-
-
-        gl.vertexAttribPointer(
-            positionAttributeLocation,
-            size,
-            type,
-            normalize,
-            stride,
-            offset
-        );
-
-
-
-        const fieldOfView = 45 * Math.PI / 180; // in radians
-        const aspect = gl.canvas.width / gl.canvas.height;
-        const zNear = 0.1;
-        const zFar = 100.0;
-
-
+        gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
 
         const projectionMatrix = mat4.create();
         mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+
         gl.activeTexture(gl.TEXTURE0);
-
-        // Bind the texture to texture unit 0
         gl.bindTexture(gl.TEXTURE_2D, texture);
-
-        // Tell the shader we bound the texture to texture unit 0
         gl.uniform1i(uSampler, 0);
-
-
-
 
         draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, 0, texture, uSampler, normalMatrixUniformLocation);
     }, []);
+
     return (
         <div>
-
-            <canvas ref={canvasRef} width={400} height={400} />
+            <canvas ref={canvasRef} width={width} height={height} />
         </div>
 
     );
