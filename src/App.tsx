@@ -11,7 +11,7 @@ function App() {
   return (
     <div >
       <Cube />
-      {/* <Triangle /> */}
+      <Triangle />
       {/* <CubeWithShadow/> */}
     </div>
   );
