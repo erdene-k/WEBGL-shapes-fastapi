@@ -51,7 +51,8 @@ interface ShapeProperties {
     textureCoordinates: number[],
     width: number,
     height: number
-    textImg: string
+    textImg: string,
+
 }
 
 function isPowerOf2(value: number) {
@@ -140,7 +141,7 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
             }
         };
         image.src = url;
-        console.log(image, "asdfasd")
+
         return texture;
     }
     function initNormalBuffer(gl: WebGLRenderingContext) {
@@ -336,12 +337,13 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform1i(uSampler, 0);
-
+        console.log("vertices", vertices)
         draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, 0, texture, uSampler, normalMatrixUniformLocation);
-    }, []);
+    }, [vertices]);
 
     return (
         <div>
+           
             <canvas ref={canvasRef} width={width} height={height} />
         </div>
 
