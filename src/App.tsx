@@ -8,7 +8,7 @@ import Texture from './textures/textures.jpg'
 import Texture1 from './textures/texture1.jpg'
 import Texture2 from './textures/texture2.jpg'
 import Property from './pages/Property';
-
+//npm install & npm start
 interface randomProperty{
   cube:number,
   sphere:number,
