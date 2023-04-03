@@ -126,15 +126,9 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
                 image
             );
 
-            // WebGL1 has different requirements for power of 2 images
-            // vs. non power of 2 images so check if the image is a
-            // power of 2 in both dimensions.
             if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-                // Yes, it's a power of 2. Generate mips.
                 gl.generateMipmap(gl.TEXTURE_2D);
             } else {
-                // No, it's not a power of 2. Turn off mips and set
-                // wrapping to clamp to edge
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -158,18 +152,16 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
         return normalBuffer;
     }
 
-    // tell webgl how to pull out the texture coordinates from buffer
     function setTextureAttribute(gl: WebGLRenderingContext, textureCoordBuffer: WebGLRenderbuffer, textureCoord: number) {
-        const num = 2; // every coordinate composed of 2 vales
-        const type = gl.FLOAT; // the data in the buffer is 32-bit float
-        const normalize = false; // don't normalize
-        const stride = 0; // how many bytes to get from one set to the next
-        const offset = 0; // how many bytes inside the buffer to start from
+        const num = 2;
+        const type = gl.FLOAT; 
+        const normalize = false; 
+        const stride = 0; 
+        const offset = 0;
         gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
         gl.vertexAttribPointer(textureCoord, num, type, normalize, stride, offset);
         gl.enableVertexAttribArray(textureCoord);
     }
-
     const update = (time: number) => {
         if (!previousTimeRef.current) {
             previousTimeRef.current = time;
@@ -177,8 +169,7 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
         }
         const deltaTime = time - previousTimeRef.current;
         previousTimeRef.current = time;
-        // Update the model view matrix with a rotation matrix
-        const angle = deltaTime / 1000 * 90; // rotate 90 degrees per second
+        const angle = deltaTime / 1000 * 90; 
         mat4.rotateX(modelViewMatrixRef.current, modelViewMatrixRef.current, angle * Math.PI / 180);
         requestRef.current = requestAnimationFrame(update);
     };
@@ -187,18 +178,19 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
         projectionMatrixUniformLocation: WebGLUniformLocation, positionBuffer: WebGLBuffer, indexBuffer: WebGLBuffer, projectionMatrix: mat4, angle: number, texture: WebGLBuffer, uSampler: WebGLUniformLocation,
         normalMatrixUniformLocation: WebGLUniformLocation) => {
         // Clear the canvas
-        gl.clearColor(0, 0, 0, 1);
+   
+        gl.clearColor(0.04, 0.12, 0.2, 1);
         gl.clearDepth(1.0);
+
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         // Compute the model view matrix
         const modelViewMatrix = mat4.create();
-
         mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -6]); // move the cube away from the camera
-        mat4.rotateX(modelViewMatrix, modelViewMatrix, angle); // rotate the cube around the Y-axis
-        mat4.rotateY(modelViewMatrix, modelViewMatrix, angle); // r
+        mat4.rotateX(modelViewMatrix, modelViewMatrix, angle); // rotate the cube around
+        mat4.rotateY(modelViewMatrix, modelViewMatrix, angle); // 
         // Set the uniforms
         gl.uniformMatrix4fv(modelViewMatrixUniformLocation, false, modelViewMatrix);
         gl.uniformMatrix4fv(projectionMatrixUniformLocation, false, projectionMatrix);
@@ -215,14 +207,13 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
-
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform1i(uSampler, 0);
 
         // Schedule the next frame
         requestAnimationFrame(() => {
-            draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.01, texture, uSampler, normalMatrixUniformLocation);
+            draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, angle + 0.008, texture, uSampler, normalMatrixUniformLocation);
         });
     }
 
@@ -231,13 +222,14 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
     useEffect(() => {
         if (!canvasRef.current) return;
         const canvas = canvasRef.current;
+        //initing webgl
         const gl = canvas.getContext("webgl");
         if (!gl) {
             console.error("Failed to get WebGL context");
             return;
         }
+        //initing shaders
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-
         if (!vertexShader) {
             console.error("Failed to create vertex shader");
             return;
@@ -245,7 +237,6 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
 
         gl.shaderSource(vertexShader, vertexShaderSource);
         gl.compileShader(vertexShader);
-
         if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
             console.error("Failed to compile vertex shader", gl.getShaderInfoLog(vertexShader));
             return;
@@ -268,7 +259,6 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
 
         const program = gl.createProgram();
         if (!program) return;
-
         gl.attachShader(program, vertexShader);
         gl.attachShader(program, fragmentShader);
         gl.linkProgram(program);
@@ -276,12 +266,10 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
             console.error("Unable to initialize the shader program:", gl.getProgramInfoLog(program));
             return;
         }
-
+        //taking attributes from the shaders
         const positionAttributeLocation = gl.getAttribLocation(program, "aVertexPosition");
-
         const modelViewMatrixUniformLocation = gl.getUniformLocation(program, "uModelViewMatrix");
         const projectionMatrixUniformLocation = gl.getUniformLocation(program, "uProjectionMatrix");
-
         const vertexNormalAttributeLocation = gl.getAttribLocation(program, "aVertexNormal");
         const normalMatrixUniformLocation = gl.getUniformLocation(program, "uNormalMatrix")
         const uSampler = gl.getUniformLocation(program, "uSampler")
@@ -316,19 +304,14 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         setTextureAttribute(gl, textureCoordBuffer, textureCoord);
         setNormalAttribute(gl, normalBuffer, vertexNormalAttributeLocation);
-
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
         gl.useProgram(program);
-
         gl.enableVertexAttribArray(positionAttributeLocation);
-
         gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
 
         const projectionMatrix = mat4.create();
@@ -337,13 +320,12 @@ const DrawingCanvas = ({ vertices, indices, vertexNormals, textureCoordinates, w
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform1i(uSampler, 0);
-        console.log("vertices", vertices)
+        //drawing scene
         draw(gl, program, positionAttributeLocation, modelViewMatrixUniformLocation, projectionMatrixUniformLocation, positionBuffer, indexBuffer, projectionMatrix, 0, texture, uSampler, normalMatrixUniformLocation);
     }, [vertices]);
 
     return (
         <div>
-           
             <canvas ref={canvasRef} width={width} height={height} />
         </div>
 

@@ -1,25 +1,24 @@
 
 body{
   flex:1;
-  background-color: #023047;
+  background-color: #0b2545;
+  margin:20px;
+  font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
-.Container{
+.container{
   display: flex;
   justify-content: space-evenly;
   padding: 20px;
 }
 label{
   color:#ffb703;
-  font-size: 26px;
-  font-weight: 600;
-
+  font-size: 24px;
+  font-weight: 500;
 }
 canvas{
   margin: 20px;
   border-radius: 10px;
 }
-
-
 
 button {
   background-color: #222;
@@ -44,24 +43,20 @@ button:focus {
   box-shadow: #ffb703 0px 0px 0px 3px;
 }
 input{ 
-  font-size: 20px;
+  font-size: 24px;
   line-height: 20px;
-  color: #24292e;
-  vertical-align: middle;
-  background-color: #023e8a;
+  color:#134074;
+  background-color: #ffffff;
   border: 1px solid #e1e4e8;
   border-radius: 6px;
-  outline: none;
   box-shadow: rgba(225, 228, 232, 0.2) 0px 1px 0px 0px inset;
   margin: 15px 0;
-  height: max-content;
   width:98%;
-  display: flex;
-  
-  
 }
 input::placeholder{
-  color: white;
+  font-size: 20px;
+  background-color: #eef4ed;
+  color:#134074
 }
 input:focus{
   border-color: #0366d6;
@@ -69,13 +64,17 @@ input:focus{
   box-shadow: rgba(3, 102, 214, 0.3) 0px 0px 0px 3px;
 }
 h2{
-  color: #219ebc;
+  color: #eef4ed;
   font-size: 40px;
-  
 }
-
 form{
   height: 540px;
-
-
+}
+.shapes{
+  margin-left: 20px;
+}
+@media only screen and (max-width: 700px) {
+  .container{
+    display: inline
+  }
 }
